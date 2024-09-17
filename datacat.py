@@ -1,19 +1,20 @@
 from fasthtml.common import *
 from hmac import compare_digest
 
-db = database('data/utodos.db')
-todos,users = db.t.todos,db.t.users
-if todos not in db.t:
+db = database('data/udatasets.db')
+# Somehow if this database has the same name as a table within the db, markdown rendering stops.
+datasets,users = db.t.datasets,db.t.users
+if datasets not in db.t:
     users.create(dict(name=str, pwd=str), pk='name')
-    todos.create(id=int, title=str, done=bool, name=str, details=str, priority=int, pk='id')
-Todo,User = todos.dataclass(),users.dataclass()
+    datasets.create(id=int, title=str, done=bool, name=str, details=str, priority=int, pk='id')
+Dataset,User = datasets.dataclass(),users.dataclass()
 
 login_redir = RedirectResponse('/login', status_code=303)
 
 def before(req, sess):
     auth = req.scope['auth'] = sess.get('auth', None)
     if not auth: return login_redir
-    todos.xtra(name=auth)
+    datasets.xtra(name=auth)
 
 markdown_js = """
 import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
@@ -63,33 +64,33 @@ def logout(sess):
 def get(fname:str, ext:str): return FileResponse(f'{fname}.{ext}')
 
 @patch
-def __ft__(self:Todo):
-    show = AX(self.title, f'/todos/{self.id}', 'current-todo')
-    edit = AX('edit',     f'/edit/{self.id}' , 'current-todo')
+def __ft__(self:Dataset):
+    show = AX(self.title, f'/datasets/{self.id}', 'current-dataset')
+    edit = AX('edit',     f'/edit/{self.id}' , 'current-dataset')
     dt = '✅ ' if self.done else ''
     cts = (dt, show, ' | ', edit, Hidden(id="id", value=self.id), Hidden(id="priority", value="0"))
-    return Li(*cts, id=f'todo-{self.id}')
+    return Li(*cts, id=f'dataset-{self.id}')
 
 @rt("/")
 def get(auth):
-    title = f"{auth}'s Todo list"
+    title = f"Data Catalogue: Welcome {auth}"
     top = Grid(H1(title), Div(A('logout', href='/logout'), style='text-align: right'))
-    new_inp = Input(id="new-title", name="title", placeholder="New Todo")
+    new_inp = Input(id="new-title", name="title", placeholder="New Dataset")
     add = Form(Group(new_inp, Button("Add")),
-               hx_post="/", target_id='todo-list', hx_swap="afterbegin")
-    frm = Form(*todos(order_by='priority'),
-               id='todo-list', cls='sortable', hx_post="/reorder", hx_trigger="end")
-    card = Card(Ul(frm), header=add, footer=Div(id='current-todo'))
+               hx_post="/", target_id='dataset-list', hx_swap="afterbegin")
+    frm = Form(*datasets(order_by='priority'),
+               id='dataset-list', cls='sortable', hx_post="/reorder", hx_trigger="end")
+    card = Card(Ul(frm), header=add, footer=Div(id='current-dataset'))
     return Title(title), Container(top, card)
 
 @rt("/search")
 def page(auth):
     return Div(
-        H3(f"{auth} Search Contacts"),
+        H3(f"Hi {auth}, Search Existing Datasets"),
         Input(
             hx_post='/searchengine', hx_target="#results",
             hx_trigger="input changed delay:500ms, search", hx_indicator=".htmx-indicator",
-            type="search", name="query", placeholder="Begin Typing To Search Users...",
+            type="search", name="query", placeholder="Begin Typing To Search Datasets...",
         ),
         Span(Img(src="/img/bars.svg"), "Searching...", cls="htmx-indicator"),
         Table(
@@ -101,22 +102,22 @@ def page(auth):
 
 @rt("/searchengine")
 def post(query: str, limit: int = 10):
-    todos(order_by='priority')
-    return [Tr(Td(x.title), Td(x.details), Td(x.done)) for x in todos(where=f'title like "%{query}%"')]
+    datasets(order_by='priority')
+    return [Tr(Td(x.title), Td(x.details), Td(x.done)) for x in datasets(where=f'title like "%{query}%"')]
     # Stop while ahead!  This next line uses __ft__ to format, but thereby contains links
     # that don't work from this page. 
-    #return todos(where=f'title like "%{query}%"')
+    #return datasets(where=f'title like "%{query}%"')
 
 @rt("/reorder")
 def post(id:list[int]):
-    for i,id_ in enumerate(id): todos.update({'priority':i}, id_)
-    return tuple(todos(order_by='priority'))
+    for i,id_ in enumerate(id): datasets.update({'priority':i}, id_)
+    return tuple(datasets(order_by='priority'))
 
-def clr_details(): return Div(hx_swap_oob='innerHTML', id='current-todo')
+def clr_details(): return Div(hx_swap_oob='innerHTML', id='current-dataset')
 
-@rt("/todos/{id}")
+@rt("/datasets/{id}")
 def delete(id:int):
-    todos.delete(id)
+    datasets.delete(id)
     return clr_details()
 
 @rt("/edit/{id}")
@@ -124,23 +125,23 @@ def get(id:int):
     res = Form(Group(Input(id="title"), Button("Save")),
         Hidden(id="id"), CheckboxX(id="done", label='Done'),
         Textarea(id="details", name="details", rows=10),
-        hx_put="/", target_id=f'todo-{id}', id="edit")
-    return fill_form(res, todos[id])
+        hx_put="/", target_id=f'dataset-{id}', id="edit")
+    return fill_form(res, datasets[id])
 
 @rt("/")
-def put(todo: Todo):
-    return todos.update(todo), clr_details()
+def put(dataset: Dataset):
+    return datasets.update(dataset), clr_details()
 
 @rt("/")
-def post(todo:Todo):
-    new_inp =  Input(id="new-title", name="title", placeholder="New Todo", hx_swap_oob='true')
-    return todos.insert(todo), new_inp
+def post(dataset:Dataset):
+    new_inp =  Input(id="new-title", name="title", placeholder="New Dataset", hx_swap_oob='true')
+    return datasets.insert(dataset), new_inp
 
-@rt("/todos/{id}")
+@rt("/datasets/{id}")
 def get(id:int):
-    todo = todos[id]
-    btn = Button('delete', hx_delete=f'/todos/{todo.id}',
-                 target_id=f'todo-{todo.id}', hx_swap="outerHTML")
-    return Div(H2(todo.title), Div(todo.details, cls="markdown"), btn)
+    dataset = datasets[id]
+    btn = Button('delete', hx_delete=f'/datasets/{dataset.id}',
+                 target_id=f'dataset-{dataset.id}', hx_swap="outerHTML")
+    return Div(H2(dataset.title), Div(dataset.details, cls="markdown"), btn)
 
 serve()
