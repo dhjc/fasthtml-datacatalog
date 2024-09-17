@@ -82,6 +82,31 @@ def get(auth):
     card = Card(Ul(frm), header=add, footer=Div(id='current-todo'))
     return Title(title), Container(top, card)
 
+@rt("/search")
+def page(auth):
+    return Div(
+        H3(f"{auth} Search Contacts"),
+        Input(
+            hx_post='/searchengine', hx_target="#results",
+            hx_trigger="input changed delay:500ms, search", hx_indicator=".htmx-indicator",
+            type="search", name="query", placeholder="Begin Typing To Search Users...",
+        ),
+        Span(Img(src="/img/bars.svg"), "Searching...", cls="htmx-indicator"),
+        Table(
+            Thead(Tr(Th("Title")),
+            Tbody(id="results"),
+            )
+        ),
+    )
+
+@rt("/searchengine")
+def post(query: str, limit: int = 10):
+    todos(order_by='priority')
+    return [Tr(Td(x.title), Td(x.details), Td(x.done)) for x in todos(where=f'title like "%{query}%"')]
+    # Stop while ahead!  This next line uses __ft__ to format, but thereby contains links
+    # that don't work from this page. 
+    #return todos(where=f'title like "%{query}%"')
+
 @rt("/reorder")
 def post(id:list[int]):
     for i,id_ in enumerate(id): todos.update({'priority':i}, id_)
