@@ -18,9 +18,19 @@ def before(req, sess):
 
 markdown_js = """
 import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
-import { proc_htmx} from "https://cdn.jsdelivr.net/gh/answerdotai/fasthtml-js/fasthtml.js";
+function proc_htmx(sel, func) {
+  htmx.onLoad(elt => {
+    const elements = Array.from(htmx.findAll(elt, sel));
+    if (elt.matches(sel)) elements.unshift(elt)
+    elements.forEach(func);
+  });
+}
 proc_htmx('.markdown', e => e.innerHTML = marked.parse(e.textContent));
 """
+
+# queston
+# why does this line not work?  I copied the function from it and that works!
+# import { proc_htmx} from "https://cdn.jsdelivr.net/gh/answerdotai/fasthtml-js/fasthtml.js";
 
 def _not_found(req, exc): return Titled('Oh no!', Div('We could not find that page :('))
 
@@ -98,15 +108,16 @@ def page(auth):
             Tbody(id="results"),
             )
         ),
+        Div(id="current-dataset")
     )
 
 @rt("/searchengine")
 def post(query: str, limit: int = 10):
     datasets(order_by='priority')
-    return [Tr(Td(x.title), Td(x.details), Td(x.done)) for x in datasets(where=f'title like "%{query}%"')]
+    #return [Tr(Td(x.title), Td(x.details), Td(x.done)) for x in datasets(where=f'title like "%{query}%"')]
     # Stop while ahead!  This next line uses __ft__ to format, but thereby contains links
     # that don't work from this page. 
-    #return datasets(where=f'title like "%{query}%"')
+    return datasets(where=f'title like "%{query}%"')
 
 @rt("/reorder")
 def post(id:list[int]):
