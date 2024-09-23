@@ -18,19 +18,9 @@ def before(req, sess):
 
 markdown_js = """
 import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
-function proc_htmx(sel, func) {
-  htmx.onLoad(elt => {
-    const elements = Array.from(htmx.findAll(elt, sel));
-    if (elt.matches(sel)) elements.unshift(elt)
-    elements.forEach(func);
-  });
-}
+import { proc_htmx} from "https://cdn.jsdelivr.net/gh/answerdotai/fasthtml-js@1.0.3/fasthtml.js";
 proc_htmx('.markdown', e => e.innerHTML = marked.parse(e.textContent));
 """
-
-# queston
-# why does this line not work?  I copied the function from it and that works!
-# import { proc_htmx} from "https://cdn.jsdelivr.net/gh/answerdotai/fasthtml-js/fasthtml.js";
 
 def _not_found(req, exc): return Titled('Oh no!', Div('We could not find that page :('))
 
