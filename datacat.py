@@ -2,7 +2,7 @@ from fasthtml.common import *
 from hmac import compare_digest
 
 db = database('data/udatasets.db')
-# Somehow if this database has the same name as a table within the db, markdown rendering stops.
+
 datasets,users = db.t.datasets,db.t.users
 if datasets not in db.t:
     users.create(dict(name=str, pwd=str), pk='name')
@@ -85,18 +85,6 @@ def __ft__(self:Dataset):
     cts = (dt, show, ' | ', edit, Hidden(id="id", value=self.id), Hidden(id="priority", value="0"))
     return Li(*cts, id=f'dataset-{self.id}')
 
-# @rt("/")
-# def get(auth):
-#     title = f"Data Catalogue: Welcome {auth}"
-#     top = Grid(H1(title), Div(A('logout', href='/logout'), style='text-align: right'))
-#     new_inp = Input(id="new-title", name="title", placeholder="New Dataset")
-#     add = Form(Group(new_inp, Button("Add")),
-#                hx_post="/", target_id='dataset-list', hx_swap="afterbegin")
-#     frm = Form(*datasets(order_by='priority'),
-#                id='dataset-list', cls='sortable', hx_post="/reorder", hx_trigger="end")
-#     card = Card(Ul(frm), header=add, footer=Div(id='current-dataset'))
-#     return Title(title), Container(top, card)
-
 @rt("/")
 def get(auth):
     title = f"{auth}'s Data Catalogue: "
@@ -119,9 +107,6 @@ def get(auth):
 @rt("/searchengine")
 def post(query: str, limit: int = 10):
     datasets(order_by='priority')
-    #return [Tr(Td(x.title), Td(x.details), Td(x.done)) for x in datasets(where=f'title like "%{query}%"')]
-    # Stop while ahead!  This next line uses __ft__ to format, but thereby contains links
-    # that don't work from this page. 
     if query != "":
         return datasets(where=f'title like "%{query}%"')
     else:
