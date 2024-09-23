@@ -44,6 +44,10 @@ app = FastHTML(before=bware,
                 )
 rt = app.route
 
+@rt("/favicon.ico")
+def favicon():
+    return FileResponse("favicon.ico")
+
 @rt("/login")
 def get():
     frm = Form(
@@ -81,35 +85,36 @@ def __ft__(self:Dataset):
     cts = (dt, show, ' | ', edit, Hidden(id="id", value=self.id), Hidden(id="priority", value="0"))
     return Li(*cts, id=f'dataset-{self.id}')
 
+# @rt("/")
+# def get(auth):
+#     title = f"Data Catalogue: Welcome {auth}"
+#     top = Grid(H1(title), Div(A('logout', href='/logout'), style='text-align: right'))
+#     new_inp = Input(id="new-title", name="title", placeholder="New Dataset")
+#     add = Form(Group(new_inp, Button("Add")),
+#                hx_post="/", target_id='dataset-list', hx_swap="afterbegin")
+#     frm = Form(*datasets(order_by='priority'),
+#                id='dataset-list', cls='sortable', hx_post="/reorder", hx_trigger="end")
+#     card = Card(Ul(frm), header=add, footer=Div(id='current-dataset'))
+#     return Title(title), Container(top, card)
+
 @rt("/")
 def get(auth):
-    title = f"Data Catalogue: Welcome {auth}"
+    title = f"{auth}'s Data Catalogue: "
     top = Grid(H1(title), Div(A('logout', href='/logout'), style='text-align: right'))
-    new_inp = Input(id="new-title", name="title", placeholder="New Dataset")
-    add = Form(Group(new_inp, Button("Add")),
-               hx_post="/", target_id='dataset-list', hx_swap="afterbegin")
-    frm = Form(*datasets(order_by='priority'),
-               id='dataset-list', cls='sortable', hx_post="/reorder", hx_trigger="end")
-    card = Card(Ul(frm), header=add, footer=Div(id='current-dataset'))
-    return Title(title), Container(top, card)
-
-@rt("/search")
-def get(auth):
-    title = f"Data Cat: {auth}"
-    return Title(title), Container(H1(title),
-        Input(
-            hx_post='/searchengine', hx_target="#results",
-            hx_trigger="input changed delay:500ms, search", hx_indicator=".htmx-indicator",
+    search = Div(Input(hx_post='/searchengine', hx_target="#results",hx_trigger="load, input changed delay:500ms, search", hx_indicator=".htmx-indicator",
             type="search", name="query", placeholder="Begin Typing To Search Datasets...",
         ),
-        Span(Img(src="/img/bars.svg"), "Searching...", cls="htmx-indicator"),
-        Table(
+    Span(Img(src="/img/bars.svg"), "Searching...", cls="htmx-indicator"),
+    Table(
             Thead(Tr(Th("Search Results")),
             Tbody(id="results"),
             )
-        ),
-        Div(id="current-dataset")
-    )
+    ),
+    Div(id="current-dataset"))
+    new_inp = Input(id="new-title", name="title", placeholder="New Dataset")
+    add = Form(Group(new_inp, Button("Add")),
+               hx_post="/", target_id='results', hx_swap="afterbegin")
+    return Title(title), Container(top, search, add)
 
 @rt("/searchengine")
 def post(query: str, limit: int = 10):
