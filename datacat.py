@@ -94,9 +94,9 @@ def get(auth):
     return Title(title), Container(top, card)
 
 @rt("/search")
-def page(auth):
-    return Div(
-        H3(f"Hi {auth}, Search Existing Datasets"),
+def get(auth):
+    title = f"Data Cat: {auth}"
+    return Title(title), Container(H1(title),
         Input(
             hx_post='/searchengine', hx_target="#results",
             hx_trigger="input changed delay:500ms, search", hx_indicator=".htmx-indicator",
