@@ -104,7 +104,7 @@ def get(auth):
         ),
         Span(Img(src="/img/bars.svg"), "Searching...", cls="htmx-indicator"),
         Table(
-            Thead(Tr(Th("Title")),
+            Thead(Tr(Th("Search Results")),
             Tbody(id="results"),
             )
         ),
@@ -117,7 +117,10 @@ def post(query: str, limit: int = 10):
     #return [Tr(Td(x.title), Td(x.details), Td(x.done)) for x in datasets(where=f'title like "%{query}%"')]
     # Stop while ahead!  This next line uses __ft__ to format, but thereby contains links
     # that don't work from this page. 
-    return datasets(where=f'title like "%{query}%"')
+    if query != "":
+        return datasets(where=f'title like "%{query}%"')
+    else:
+        return datasets()
 
 @rt("/reorder")
 def post(id:list[int]):
