@@ -3,11 +3,18 @@ from hmac import compare_digest
 
 db = database('data/udatasets.db')
 
-datasets,users = db.t.datasets,db.t.users
-if datasets not in db.t:
-    users.create(dict(name=str, pwd=str), pk='name')
-    datasets.create(id=int, title=str, done=bool, name=str, details=str, priority=int, pk='id')
-Dataset,User = datasets.dataclass(),users.dataclass()
+class User: name:str; pwd:str
+class Dataset:
+    id:int;title:str;done:bool;name:str;details:str;priority:int
+    def __ft__(self):
+        show = AX(self.title, f'/datasets/{self.id}', 'current-dataset')
+        edit = AX('edit',     f'/edit/{self.id}' , 'current-dataset')
+        dt = '✅ ' if self.done else ''
+        cts = (dt, show, ' | ', edit, Hidden(id="id", value=self.id), Hidden(id="priority", value="0"))
+        return Ul(*cts, id=f'dataset-{self.id}')
+
+users = db.create(User, pk='name')
+datasets = db.create(Dataset)
 
 login_redir = RedirectResponse('/login', status_code=303)
 
@@ -66,14 +73,6 @@ def logout(sess):
 
 @rt("/{fname:path}.{ext:static}")
 def get(fname:str, ext:str): return FileResponse(f'{fname}.{ext}')
-
-@patch
-def __ft__(self:Dataset):
-    show = AX(self.title, f'/datasets/{self.id}', 'current-dataset')
-    edit = AX('edit',     f'/edit/{self.id}' , 'current-dataset')
-    dt = '✅ ' if self.done else ''
-    cts = (dt, show, ' | ', edit, Hidden(id="id", value=self.id), Hidden(id="priority", value="0"))
-    return Li(*cts, id=f'dataset-{self.id}')
 
 @rt("/")
 def get(auth):
