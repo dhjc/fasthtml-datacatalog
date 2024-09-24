@@ -1,12 +1,19 @@
 from fasthtml.common import *
 from hmac import compare_digest
 
+# DATABASES
+# ---------
+# These are created first because one of them is needed to store the users,
+# and login functionality is next.
+
 db = database('data/udatasets.db')
 
 class User: name:str; pwd:str
 class Dataset:
     id:int;title:str;done:bool;name:str;details:str;priority:int
     def __ft__(self):
+        """Tells FastHTML how a dataset should be presented as HTML
+        """
         show = AX(self.title, f'/datasets/{self.id}', 'current-dataset')
         edit = AX('edit',     f'/edit/{self.id}' , 'current-dataset')
         dt = '✅ ' if self.done else ''
@@ -15,6 +22,8 @@ class Dataset:
 
 users = db.create(User, pk='name')
 datasets = db.create(Dataset)
+
+# APP SETUP
 
 login_redir = RedirectResponse('/login', status_code=303)
 
@@ -35,14 +44,22 @@ app = FastHTML(before=bware,
                exception_handlers={404: _not_found},
                hdrs=(picolink,
                      Style(':root { --pico-font-size: 100%; }'),
-                     SortableJS('.sortable'),
                      Script(markdown_js, type='module'))
                 )
+
+# ROUTES
+
 rt = app.route
 
-@rt("/favicon.ico")
-def favicon():
-    return FileResponse("favicon.ico")
+@rt("/{fname:path}.{ext:static}")
+def get(fname:str, ext:str): return FileResponse(f'{fname}.{ext}')
+
+
+# Routes relating to user login
+# -----------------------------
+# Skip to the next section if you're interested only in
+# the data catalog implementation.  None of this has been changes from FastHTML's idiomatic
+# app example
 
 @rt("/login")
 def get():
@@ -70,8 +87,9 @@ def logout(sess):
     del sess['auth']
     return login_redir
 
-@rt("/{fname:path}.{ext:static}")
-def get(fname:str, ext:str): return FileResponse(f'{fname}.{ext}')
+# Routes relating to the Data Catalog
+# -----------------------------------
+# This is probably where you want to look first!
 
 @rt("/")
 def get(auth):
@@ -96,7 +114,7 @@ def get(auth):
 def post(query: str, limit: int = 10):
     datasets(order_by='priority')
     if query != "":
-        return datasets(where=f'title like "%{query}%"')
+        return datasets(where=f'title like "%{query}%" OR details like "%{query}%"')
     else:
         return datasets()
 
@@ -136,4 +154,5 @@ def get(id:int):
                  target_id=f'dataset-{dataset.id}', hx_swap="outerHTML")
     return Div(H2(dataset.title), Div(dataset.details, cls="markdown"), btn)
 
+# And go!
 serve()
