@@ -1,5 +1,6 @@
 from fasthtml.common import *
 from hmac import compare_digest
+import time
 
 # DATABASES
 # ---------
@@ -10,14 +11,15 @@ db = database('data/udatasets.db')
 
 class User: name:str; pwd:str
 class Dataset:
-    id:int;title:str;done:bool;name:str;details:str;priority:int
+    id:int;title:str;favourite:bool;name:str;details:str;lastmod:str
     def __ft__(self):
         """Tells FastHTML how a dataset should be presented as HTML
         """
         show = AX(self.title, f'/datasets/{self.id}', 'current-dataset')
         edit = AX('edit',     f'/edit/{self.id}' , 'current-dataset')
-        dt = '✅ ' if self.done else ''
-        cts = (dt, show, ' | ', edit, Hidden(id="id", value=self.id), Hidden(id="priority", value="0"))
+        fave = '⭐ ' if self.favourite else ''
+        lastmodified = f'last modified by {self.lastmod}'
+        cts = (fave, show, ' | ', edit, ' | ', lastmodified, Hidden(id="id", value=self.id))
         return Li(*cts, id=f'dataset-{self.id}')
 
 users = db.create(User, pk='name')
@@ -98,7 +100,7 @@ def get(auth):
     search = Div(Input(hx_post='/searchengine', hx_target="#results",hx_trigger="load, input changed delay:500ms, search", hx_indicator=".htmx-indicator",
             type="search", name="query", placeholder="Begin Typing To Search Datasets...",
         ),
-    Span(Img(src="/img/bars.svg"), "Searching...", cls="htmx-indicator"),
+    Span("Searching...", cls="htmx-indicator"),
     Table(
             Thead(Tr(Th("Search Results")),
             Tbody(id="results"),
@@ -106,24 +108,21 @@ def get(auth):
     ),
     Div(id="current-dataset"))
     new_inp = Input(id="new-title", name="title", placeholder="New Dataset")
-    add = Form(Group(new_inp, Button("Add")),
+    new_inp2 = Hidden(name='lastmod', value=auth)
+    add = Form(Group(new_inp,new_inp2, Button("Add")),
                hx_post="/", target_id='results', hx_swap="afterbegin")
     return Title(title), Container(top, search, add)
 
 @rt("/searchengine")
 def post(query: str, limit: int = 10):
-    datasets(order_by='priority')
+    time.sleep(1) #Just to allow a 'searching' element to appear, for ux/demo
     if query != "":
-        return datasets(where=f'title like "%{query}%" OR details like "%{query}%"')
+        return datasets(where=f'title like "%{query}%" OR details like "%{query}%"', order_by='title')
     else:
-        return datasets()
-
-@rt("/reorder")
-def post(id:list[int]):
-    for i,id_ in enumerate(id): datasets.update({'priority':i}, id_)
-    return tuple(datasets(order_by='priority'))
+        return datasets(order_by='title')
 
 def clr_details(): return Div(hx_swap_oob='innerHTML', id='current-dataset')
+
 
 @rt("/datasets/{id}")
 def delete(id:int):
@@ -133,17 +132,18 @@ def delete(id:int):
 @rt("/edit/{id}")
 def get(id:int, auth):
     res = Form(Group(Input(id="title"), Button("Save")),
-        Hidden(id="id"), CheckboxX(id="done", label='Done'),
+        Hidden(id="id"), CheckboxX(id="favourite", label='Favourite'),
         Textarea(id="details", name="details", placeholder=f"Hi {auth}, in future changes to the catalog will include you username as metadata for any changes.", rows=10),
         hx_put="/", target_id=f'dataset-{id}', id="edit")
     return fill_form(res, datasets[id])
 
 @rt("/")
-def put(dataset: Dataset):
+def put(dataset: Dataset, auth):
+    dataset.lastmod = auth
     return datasets.update(dataset), clr_details()
 
 @rt("/")
-def post(dataset:Dataset):
+def post(dataset:Dataset, auth):
     new_inp =  Input(id="new-title", name="title", placeholder="New Dataset", hx_swap_oob='true')
     return datasets.insert(dataset), new_inp
 
