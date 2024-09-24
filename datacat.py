@@ -11,7 +11,7 @@ class Dataset:
         edit = AX('edit',     f'/edit/{self.id}' , 'current-dataset')
         dt = '✅ ' if self.done else ''
         cts = (dt, show, ' | ', edit, Hidden(id="id", value=self.id), Hidden(id="priority", value="0"))
-        return Ul(*cts, id=f'dataset-{self.id}')
+        return Li(*cts, id=f'dataset-{self.id}')
 
 users = db.create(User, pk='name')
 datasets = db.create(Dataset)
@@ -21,7 +21,6 @@ login_redir = RedirectResponse('/login', status_code=303)
 def before(req, sess):
     auth = req.scope['auth'] = sess.get('auth', None)
     if not auth: return login_redir
-    datasets.xtra(name=auth)
 
 markdown_js = """
 import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
@@ -76,7 +75,7 @@ def get(fname:str, ext:str): return FileResponse(f'{fname}.{ext}')
 
 @rt("/")
 def get(auth):
-    title = f"{auth}'s Data Catalogue: "
+    title = f"Data Catalogue: Welcome {auth}"
     top = Grid(H1(title), Div(A('logout', href='/logout'), style='text-align: right'))
     search = Div(Input(hx_post='/searchengine', hx_target="#results",hx_trigger="load, input changed delay:500ms, search", hx_indicator=".htmx-indicator",
             type="search", name="query", placeholder="Begin Typing To Search Datasets...",
@@ -114,10 +113,10 @@ def delete(id:int):
     return clr_details()
 
 @rt("/edit/{id}")
-def get(id:int):
+def get(id:int, auth):
     res = Form(Group(Input(id="title"), Button("Save")),
         Hidden(id="id"), CheckboxX(id="done", label='Done'),
-        Textarea(id="details", name="details", rows=10),
+        Textarea(id="details", name="details", placeholder=f"Hi {auth}, in future changes to the catalog will include you username as metadata for any changes.", rows=10),
         hx_put="/", target_id=f'dataset-{id}', id="edit")
     return fill_form(res, datasets[id])
 
