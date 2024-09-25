@@ -54,6 +54,7 @@ app = FastHTML(before=bware,
 
 rt = app.route
 
+# If you use fast_app instead of FastHTML above, this next bit isn't needed
 @rt("/{fname:path}.{ext:static}")
 def get(fname:str, ext:str): return FileResponse(f'{fname}.{ext}') 
 
@@ -147,7 +148,8 @@ def put(dataset: Dataset, auth):
     return datasets.update(dataset), clr_details()
 
 @rt("/")
-def post(dataset:Dataset, auth):
+def post(dataset:Dataset):
+    # Doesn't use auth as it is entered as a hidde value in the form that creates this dataset in get /
     new_inp =  Input(id="title", placeholder="New Dataset", hx_swap_oob='true')
     return datasets.insert(dataset), new_inp
 
