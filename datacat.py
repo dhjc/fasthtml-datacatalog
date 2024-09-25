@@ -55,7 +55,7 @@ app = FastHTML(before=bware,
 rt = app.route
 
 @rt("/{fname:path}.{ext:static}")
-def get(fname:str, ext:str): return FileResponse(f'{fname}.{ext}')
+def get(fname:str, ext:str): return FileResponse(f'{fname}.{ext}') 
 
 
 # Routes relating to user login
@@ -109,15 +109,14 @@ def get(auth):
             )
     ),
     Div(id="current-dataset"))
-    new_inp = Input(id="new-title", name="title", placeholder="New Dataset")
-    new_inp2 = Hidden(name='lastmod', value=auth)
+    new_inp = Input(id="title", placeholder="New Dataset")
+    new_inp2 = Hidden(id='lastmod', value=auth)
     add = Form(Group(new_inp,new_inp2, Button("Add")),
                hx_post="/", target_id='results', hx_swap="afterbegin")
     return Title(title), Container(top, add, search)
 
 @rt("/searchengine")
 def post(query: str, limit: int = 10):
-    time.sleep(1) #Just to allow a 'searching' element to appear, for ux/demo
     if query != "":
         return datasets(where=f'title like "%{query}%" OR details like "%{query}%"', order_by='title')
     else:
@@ -135,9 +134,9 @@ def delete(id:int):
 def get(id:int, auth):
     res = Form(Group(Input(id="title")),
         Hidden(id="id"), CheckboxX(id="favourite", label='Favourite'),
-        Textarea(id="details", name="details", placeholder=f"Hi {auth}, in future changes to the catalog will include you username as metadata for any changes.", rows=10),
-        Label('API Endpoint URL', Input(id='api_url', name='api_url',placeholder="Where should a user go to access your API?")),
-        Label('API Documentation URL', Input(id='api_doc_url', name='api_doc_url', placeholder="Where should a user go to access your API Documentation?")),
+        Textarea(id="details", placeholder=f"Hi {auth}, in future changes to the catalog will include you username as metadata for any changes.", rows=10),
+        Label('API Endpoint URL', Input(id='api_url',placeholder="Where should a user go to access your API?")),
+        Label('API Documentation URL', Input(id='api_doc_url', placeholder="Where should a user go to access your API Documentation?")),
         Button("Save Dataset"),
         hx_put="/", target_id=f'dataset-{id}', id="edit")
     return fill_form(res, datasets[id])
@@ -149,8 +148,18 @@ def put(dataset: Dataset, auth):
 
 @rt("/")
 def post(dataset:Dataset, auth):
-    new_inp =  Input(id="new-title", name="title", placeholder="New Dataset", hx_swap_oob='true')
+    new_inp =  Input(id="title", placeholder="New Dataset", hx_swap_oob='true')
     return datasets.insert(dataset), new_inp
+
+@app.get
+def models(make: str, sleep: int = 0):
+    time.sleep(sleep)
+    cars = {
+        "audi": ["A1", "A4", "A6"],
+        "toyota": ["Landcruiser", "Tacoma", "Yaris"],
+        "bmw": ["325i", "325ix", "X5"],
+    }
+    return tuple(Option(v, value=v) for v in cars[make])
 
 @rt("/datasets/{id}")
 def get(id:int):
