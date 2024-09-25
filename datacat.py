@@ -7,11 +7,12 @@ import time
 # These are created first because one of them is needed to store the users,
 # and login functionality is next.
 
-db = database('data/udatasets.db')
+db = database('data/datasets.db')
 
 class User: name:str; pwd:str
 class Dataset:
     id:int;title:str;favourite:bool;name:str;details:str;lastmod:str
+    api_url:str;api_doc_url:str
     def __ft__(self):
         """Tells FastHTML how a dataset should be presented as HTML
         """
@@ -95,8 +96,9 @@ def logout(sess):
 
 @rt("/")
 def get(auth):
-    title = f"Data Catalogue: Welcome {auth}"
-    top = Grid(H1(title), Div(A('logout', href='/logout'), style='text-align: right'))
+    title = f"Data Catalogue"
+    welcome = f"Current user: {auth}"
+    top = Grid(H1(title), H2(welcome), Div(A('logout', href='/logout'), style='text-align: right'))
     search = Div(Input(hx_post='/searchengine', hx_target="#results",hx_trigger="load, input changed delay:500ms, search", hx_indicator=".htmx-indicator",
             type="search", name="query", placeholder="Begin Typing To Search Datasets...",
         ),
@@ -111,7 +113,7 @@ def get(auth):
     new_inp2 = Hidden(name='lastmod', value=auth)
     add = Form(Group(new_inp,new_inp2, Button("Add")),
                hx_post="/", target_id='results', hx_swap="afterbegin")
-    return Title(title), Container(top, search, add)
+    return Title(title), Container(top, add, search)
 
 @rt("/searchengine")
 def post(query: str, limit: int = 10):
@@ -131,9 +133,12 @@ def delete(id:int):
 
 @rt("/edit/{id}")
 def get(id:int, auth):
-    res = Form(Group(Input(id="title"), Button("Save")),
+    res = Form(Group(Input(id="title")),
         Hidden(id="id"), CheckboxX(id="favourite", label='Favourite'),
         Textarea(id="details", name="details", placeholder=f"Hi {auth}, in future changes to the catalog will include you username as metadata for any changes.", rows=10),
+        Label('API Endpoint URL', Input(id='api_url', name='api_url',placeholder="Where should a user go to access your API?")),
+        Label('API Documentation URL', Input(id='api_doc_url', name='api_doc_url', placeholder="Where should a user go to access your API Documentation?")),
+        Button("Save Dataset"),
         hx_put="/", target_id=f'dataset-{id}', id="edit")
     return fill_form(res, datasets[id])
 
@@ -152,7 +157,7 @@ def get(id:int):
     dataset = datasets[id]
     btn = Button('delete', hx_delete=f'/datasets/{dataset.id}',
                  target_id=f'dataset-{dataset.id}', hx_swap="outerHTML")
-    return Div(H2(dataset.title), Div(dataset.details, cls="markdown"), btn)
+    return Div(H2(dataset.title), A('API Endpoint URL',href=dataset.api_url), Br(), (A('API Documentation', href=dataset.api_url)), Div(dataset.details, cls="markdown"), btn, Hr())
 
 # And go!
 serve()
