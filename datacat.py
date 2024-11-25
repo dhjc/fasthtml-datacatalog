@@ -1,6 +1,7 @@
 from fasthtml.common import *
 from hmac import compare_digest
 import time
+import pandas as pd
 
 # DATABASES
 # ---------
@@ -10,21 +11,48 @@ import time
 db = database('data/datasets.db')
 
 class User: name:str; pwd:str
-class Dataset:
-    id:int;title:str;favourite:bool;name:str;details:str;lastmod:str
-    api_url:str;api_doc_url:str
-    def __ft__(self):
-        """Tells FastHTML how a dataset should be presented as HTML
-        """
-        show = AX(self.title, f'/datasets/{self.id}', 'current-dataset')
-        edit = AX('edit',     f'/edit/{self.id}' , 'current-dataset')
-        fave = '⭐ ' if self.favourite else ''
-        lastmodified = f'last modified by {self.lastmod}'
-        cts = (fave, show, ' | ', edit, ' | ', lastmodified, Hidden(id="id", value=self.id))
-        return Li(*cts, id=f'dataset-{self.id}')
+
+import csv
+from typing import Dict, Type
+
+def generate_dataset_class(csv_path: str) -> Type:
+    # Read field definitions
+    with open(csv_path, 'r') as f:
+        reader = csv.DictReader(f)
+        fields = {row['named']: row['type'] for row in reader}
+    
+    # Generate class code
+    class_code = ["class Dataset:"]
+    annotations = []
+    
+    for name, type_str in fields.items():
+        annotations.append(f"    {name}: {type_str}")
+    
+    # Join all parts
+    complete_code = "\n".join(class_code + annotations)
+    
+    # Create and return class
+    namespace = {}
+    exec(complete_code, namespace)
+    return namespace['Dataset']
+
+Dataset = generate_dataset_class('questions.csv')
+
+@patch
+def __ft__(self:Dataset):
+    """Tells FastHTML how a dataset should be presented as HTML
+    """
+    show = AX(self.dataset_name, f'/datasets/{self.id}', 'current-dataset')
+    edit = AX('edit',     f'/edit/{self.id}' , 'current-dataset')
+    fave = '⭐ ' if self.favourite else ''
+    lastmodified = f'last modified by {self.lastmod}'
+    cts = (fave, show, ' | ', edit, ' | ', lastmodified, Hidden(id="id", value=self.id))
+    return Li(*cts, id=f'dataset-{self.id}')
 
 users = db.create(User, pk='name')
 datasets = db.create(Dataset)
+
+questions_df = pd.read_csv('questions.csv').set_index('named')
 
 # APP SETUP
 
@@ -110,7 +138,7 @@ def get(auth):
             )
     ),
     Div(id="current-dataset"))
-    new_inp = Input(id="title", placeholder="New Dataset")
+    new_inp = Input(id="dataset_name", placeholder="New Dataset")
     new_inp2 = Hidden(id='lastmod', value=auth)
     add = Form(Group(new_inp,new_inp2, Button("Add")),
                hx_post="/", target_id='results', hx_swap="afterbegin")
@@ -119,9 +147,9 @@ def get(auth):
 @rt("/searchengine")
 def post(query: str, limit: int = 10):
     if query != "":
-        return datasets(where=f'title like "%{query}%" OR details like "%{query}%"', order_by='title')
+        return datasets(where=f'dataset_name like "%{query}%" OR details like "%{query}%"', order_by='dataset_name')
     else:
-        return datasets(order_by='title')
+        return datasets(order_by='dataset_name')
 
 def clr_details(): return Div(hx_swap_oob='innerHTML', id='current-dataset')
 
@@ -133,11 +161,10 @@ def delete(id:int):
 
 @rt("/edit/{id}")
 def get(id:int, auth):
-    res = Form(Group(Input(id="title")),
+    res = Form(Group(Input(id="dataset_name")),
         Hidden(id="id"), CheckboxX(id="favourite", label='Favourite'),
         Textarea(id="details", placeholder=f"Hi {auth}, in future changes to the catalog will include you username as metadata for any changes.", rows=10),
-        Label('API Endpoint URL', Input(id='api_url',placeholder="Where should a user go to access your API?")),
-        Label('API Documentation URL', Input(id='api_doc_url', placeholder="Where should a user go to access your API Documentation?")),
+        Label(questions_df.loc['answer_with_url'].iloc[1], Input(id='answer_with_url',placeholder="This answer should be a URL")),
         Button("Save Dataset"),
         hx_put="/", target_id=f'dataset-{id}', id="edit")
     return fill_form(res, datasets[id])
@@ -150,7 +177,7 @@ def put(dataset: Dataset, auth):
 @rt("/")
 def post(dataset:Dataset):
     # Doesn't use auth as it is entered as a hidde value in the form that creates this dataset in get /
-    new_inp =  Input(id="title", placeholder="New Dataset", hx_swap_oob='true')
+    new_inp =  Input(id="dataset_name", placeholder="New Dataset", hx_swap_oob='true')
     return datasets.insert(dataset), new_inp
 
 @app.get
@@ -168,7 +195,7 @@ def get(id:int):
     dataset = datasets[id]
     btn = Button('delete', hx_delete=f'/datasets/{dataset.id}',
                  target_id=f'dataset-{dataset.id}', hx_swap="outerHTML")
-    return Div(H2(dataset.title), A('API Endpoint URL',href=dataset.api_url), Br(), (A('API Documentation', href=dataset.api_url)), Div(dataset.details, cls="markdown"), btn, Hr())
+    return Div(H2(dataset.dataset_name), P(questions_df.loc['answer_with_url'].iloc[1]+": ", A("Link",href=dataset.answer_with_url)), Div(dataset.details, cls="markdown"), btn, Hr())
 
 # And go!
 serve()
