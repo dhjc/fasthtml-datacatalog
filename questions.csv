@@ -7,4 +7,4 @@ details,str,Notes,Stuff
 lastmod,str,Last Modified,Who last modified this
 answer_with_url,str,What is your favourite website?,https://grugbrain.dev
 answer_with_text,str,What is your favourite quote?,What is the ultimate question?
-answer_with_dropdown, str, What is your favourite animal?,Cat
+answer_with_dropdown,str,What is your favourite animal?,Cat
