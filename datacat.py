@@ -159,12 +159,23 @@ def delete(id:int):
     datasets.delete(id)
     return clr_details()
 
+def create_question_labels(questions_df):
+    return [
+        Label(
+            row.iloc[1],
+            Input(id=idx, placeholder=row.iloc[2])
+        )
+        for idx, row in questions_df.iterrows() if idx not in ['lastmod', 'name', 'id', 'favourite']
+    ]
+
 @rt("/edit/{id}")
 def get(id:int, auth):
+    labels = create_question_labels(questions_df)
+
     res = Form(Group(Input(id="dataset_name")),
         Hidden(id="id"), CheckboxX(id="favourite", label='Favourite'),
         Textarea(id="details", placeholder=f"Hi {auth}, in future changes to the catalog will include you username as metadata for any changes.", rows=10),
-        Label(questions_df.loc['answer_with_url'].iloc[1], Input(id='answer_with_url',placeholder="This answer should be a URL")),
+        *labels,
         Button("Save Dataset"),
         hx_put="/", target_id=f'dataset-{id}', id="edit")
     return fill_form(res, datasets[id])
@@ -190,12 +201,38 @@ def models(make: str, sleep: int = 0):
     }
     return tuple(Option(v, value=v) for v in cars[make])
 
+def create_answer_paragraphs(dataset, questions_df):
+    paragraphs = []
+    for idx, row in questions_df.iterrows():
+        # Get the answer value from the dataset using the index name
+        answer = getattr(dataset, idx, None)
+        if answer:
+            # Create a paragraph with question text and answer link
+            if 'url' in idx:
+                p = P(
+                    f"{row.iloc[1]}: ",  # Question text
+                    A("Link", href=answer)
+                )
+            else:
+                p = P(
+                    f"{row.iloc[1]}: {answer}"
+                )
+            paragraphs.append(p)
+    return paragraphs
+
 @rt("/datasets/{id}")
 def get(id:int):
     dataset = datasets[id]
     btn = Button('delete', hx_delete=f'/datasets/{dataset.id}',
                  target_id=f'dataset-{dataset.id}', hx_swap="outerHTML")
-    return Div(H2(dataset.dataset_name), P(questions_df.loc['answer_with_url'].iloc[1]+": ", A("Link",href=dataset.answer_with_url)), Div(dataset.details, cls="markdown"), btn, Hr())
+    answer_paragraphs = create_answer_paragraphs(dataset, questions_df)
+
+    return Div(H2(dataset.dataset_name), 
+               *answer_paragraphs,
+               Div(dataset.details, cls="markdown"), btn, Hr())
+
+# leave this here
+# P(questions_df.loc['answer_with_url'].iloc[1]+": ", A("Link",href=dataset.answer_with_url))
 
 # And go!
 serve()

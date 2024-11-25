@@ -1,8 +1,10 @@
-named,type, full_question
-id,int, Unique ID
-dataset_name,str, Dataset Name
-favourite,bool, Favourite
-name,str, Not Actually Sure
-details,str, Notes
-lastmod,str, Last Modified
-answer_with_url,str, What is your favourite website?
+named,type,full_question,placeholder_text
+id,int,Unique ID,eg 0...
+dataset_name,str,Dataset Name,What is your dataset called?
+favourite,bool,Favourite,NA
+name,str,Not Actually Sure,Do you know why I coded this?
+details,str,Notes,Stuff
+lastmod,str,Last Modified,Who last modified this
+answer_with_url,str,What is your favourite website?,https://grugbrain.dev
+answer_with_text,str,What is your favourite quote?,What is the ultimate question?
+answer_with_dropdown, str, What is your favourite animal?,Cat
