@@ -3,6 +3,8 @@ from hmac import compare_digest
 import time
 import pandas as pd
 
+# Add validation: https://gallery.fastht.ml/split/dynamic_user_interface/inline_validation
+
 # DATABASES
 # ---------
 # These are created first because one of them is needed to store the users,
