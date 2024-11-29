@@ -192,7 +192,8 @@ async def post(req, idx: str):
 
 def create_question_labels(questions_df):
     list_to_exclude=['lastmod', 'name', 'id', 'favourite']
-    included_questions_df = questions_df.query('type not in @list_to_exclude')
+    included_questions_df = questions_df.query('named not in @list_to_exclude')
+    print(included_questions_df)
     return [
         Div(Label(
             row.iloc[1],
