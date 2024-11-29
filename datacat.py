@@ -3,6 +3,9 @@ from hmac import compare_digest
 import time
 import pandas as pd
 
+import re
+strict_email = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$'
+
 # Add validation: https://gallery.fastht.ml/split/dynamic_user_interface/inline_validation
 
 # DATABASES
@@ -161,6 +164,32 @@ def delete(id:int):
     datasets.delete(id)
     return clr_details()
 
+@rt('/contact/email/{idx}')
+async def post(req, idx: str):
+    # Extract form data
+    form_data = await req.form()
+    email = form_data.get(idx)  # Get email using the field name
+
+    if re.match(strict_email, email):
+        return Div(
+            Label('Email Address'),
+            Input(name=idx, hx_post=f'/contact/email/{idx}', hx_indicator='#ind', 
+                  value=email, aria_invalid="false"),
+            hx_target='this',
+            hx_swap='outerHTML',
+            cls='success'
+        )
+    else:
+        return Div(
+            Label('Email Address'),
+            Input(name=idx, hx_post=f'/contact/email/{idx}', hx_indicator='#ind',
+                  value=email, aria_invalid="true"),
+            Small('Error :(', cls='error-message', role="alert"),
+            hx_target='this',
+            hx_swap='outerHTML',
+            cls='error'
+        )
+
 def create_question_labels(questions_df):
     list_to_exclude=['lastmod', 'name', 'id', 'favourite']
     included_questions_df = questions_df.query('type not in @list_to_exclude')
@@ -168,9 +197,20 @@ def create_question_labels(questions_df):
         Div(Label(
             row.iloc[1],
             Input(id=idx, type=row.iloc[3],placeholder=row.iloc[2])
-        ))
+        )) if 'email' not in idx else
+        Div(
+            Label('Email Address'),
+            Input(id=idx, type=row.iloc[3], placeholder=row.iloc[2], 
+                 name=idx,  # For database storage
+                 hx_post=f'/contact/email/{idx}',  # Pass field name in URL
+                 hx_indicator='#ind'),
+            hx_target='this',
+            hx_swap='outerHTML'
+        )
         for idx, row in included_questions_df.iterrows()
     ]
+
+#[x if condition else y for x in items]
 
 @rt("/edit/{id}")
 def get(id:int, auth):

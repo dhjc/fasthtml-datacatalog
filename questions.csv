@@ -9,3 +9,4 @@ answer_with_url,str,What is your favourite website?,https://grugbrain.dev,text
 answer_with_text,str,What is your favourite quote?,What is the ultimate question?,text
 answer_with_dropdown,str,What is your favourite animal?,Cat,text
 answer_with_date,str,What is your favourite date?,01/01/2000,date
+user_email,str,What is your email?,someone@someplace.com,text
