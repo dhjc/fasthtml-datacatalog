@@ -162,22 +162,24 @@ def delete(id:int):
     return clr_details()
 
 def create_question_labels(questions_df):
+    list_to_exclude=['lastmod', 'name', 'id', 'favourite']
+    included_questions_df = questions_df.query('type not in @list_to_exclude')
     return [
-        Label(
+        Div(Label(
             row.iloc[1],
-            Input(id=idx, placeholder=row.iloc[2])
-        )
-        for idx, row in questions_df.iterrows() if idx not in ['lastmod', 'name', 'id', 'favourite']
+            Input(id=idx, type=row.iloc[3],placeholder=row.iloc[2])
+        ))
+        for idx, row in included_questions_df.iterrows()
     ]
 
 @rt("/edit/{id}")
 def get(id:int, auth):
-    labels = create_question_labels(questions_df)
+    questions = create_question_labels(questions_df)
 
     res = Form(Group(Input(id="dataset_name")),
         Hidden(id="id"), CheckboxX(id="favourite", label='Favourite'),
         Textarea(id="details", placeholder=f"Hi {auth}, in future changes to the catalog will include you username as metadata for any changes.", rows=10),
-        *labels,
+        *questions,
         Button("Save Dataset"),
         hx_put="/", target_id=f'dataset-{id}', id="edit")
     return fill_form(res, datasets[id])
