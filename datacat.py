@@ -222,7 +222,7 @@ def get(id:int, auth):
         Textarea(id="details", placeholder=f"Hi {auth}, in future changes to the catalog will include you username as metadata for any changes.", rows=10),
         *questions,
         Button("Save Dataset"),
-        hx_put="/", target_id=f'dataset-{id}', id="edit")
+        hx_put="/", target_id=f'dataset-{id}', id="edit", hx_swap='outerHTML')
     return fill_form(res, datasets[id])
 
 @rt("/")
