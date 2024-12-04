@@ -1,12 +1,13 @@
-named,type,full_question,placeholder_text,htmltype
-id,int,Unique ID,eg 0...,text
-dataset_name,str,Dataset Name,What is your dataset called?,text
-favourite,bool,Favourite,NA,text
-name,str,Not Actually Sure,Do you know why I coded this?,text
-details,str,Notes,Stuff,text
-lastmod,str,Last Modified,Who last modified this,text
-answer_with_url,str,What is your favourite website?,https://grugbrain.dev,text
-answer_with_text,str,What is your favourite quote?,What is the ultimate question?,text
-answer_with_dropdown,str,What is your favourite animal?,Cat,text
-answer_with_date,str,What is your favourite date?,01/01/2000,date
-user_email,str,What is your email?,someone@someplace.com,text
+named,type,full_question,placeholder_text,htmltype,options
+id,int,Unique ID,eg 0...,text,
+dataset_name_text,str,Dataset Name,What is your dataset called?,text,
+favourite,bool,Favourite,NA,text,
+name,str,Not Actually Sure,Do you know why I coded this?,text,
+details_text,str,Notes,Stuff,text,
+lastmod,str,Last Modified,Who last modified this,text,
+answer_with_url_text,str,What is your favourite website?,https://grugbrain.dev,text,
+answer_with_text,str,What is your favourite quote?,What is the ultimate question?,text,
+color_select,str,Pick a color,Choose a color,select,Red|Blue|Green
+size_radio,str,Choose a size,Select size,radio,Small|Medium|Large
+answer_with_date,str,What is your favourite date?,01/01/2000,date,
+user_email,str,What is your email?,someone@someplace.com,email,

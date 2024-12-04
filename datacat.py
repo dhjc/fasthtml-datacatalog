@@ -47,7 +47,7 @@ Dataset = generate_dataset_class('questions.csv')
 def __ft__(self:Dataset):
     """Tells FastHTML how a dataset should be presented as HTML
     """
-    show = AX(self.dataset_name, f'/datasets/{self.id}', 'current-dataset')
+    show = AX(self.dataset_name_text, f'/datasets/{self.id}', 'current-dataset')
     edit = AX('edit',     f'/edit/{self.id}' , 'current-dataset')
     fave = '⭐ ' if self.favourite else ''
     lastmodified = f'last modified by {self.lastmod}'
@@ -101,8 +101,8 @@ def get(fname:str, ext:str): return FileResponse(f'{fname}.{ext}')
 @rt("/login")
 def get():
     frm = Form(
-        Input(id='name', placeholder='Name'),
-        Input(id='pwd', type='password', placeholder='Password'),
+        Input(id='name', placeholder='Name              If this is your first use, as long as you pick a unique name an account will be set up'),
+        Input(id='pwd', type='password', placeholder='Password        ***Make it unique, do not reuse a password** Admins can see this in plain text!'),
         Button('login'),
         action='/login', method='post')
     return Titled("Login", frm)
@@ -143,7 +143,7 @@ def get(auth):
             )
     ),
     Div(id="current-dataset"))
-    new_inp = Input(id="dataset_name", placeholder="New Dataset")
+    new_inp = Input(id="dataset_name_text", placeholder="New Dataset")
     new_inp2 = Hidden(id='lastmod', value=auth)
     add = Form(Group(new_inp,new_inp2, Button("Add")),
                hx_post="/", target_id='results', hx_swap="afterbegin")
@@ -152,9 +152,9 @@ def get(auth):
 @rt("/searchengine")
 def post(query: str, limit: int = 10):
     if query != "":
-        return datasets(where=f'dataset_name like "%{query}%" OR details like "%{query}%"', order_by='dataset_name')
+        return datasets(where=f'dataset_name_text like "%{query}%" OR details_text like "%{query}%"', order_by='dataset_name_text')
     else:
-        return datasets(order_by='dataset_name')
+        return datasets(order_by='dataset_name_text')
 
 def clr_details(): return Div(hx_swap_oob='innerHTML', id='current-dataset')
 
@@ -191,25 +191,73 @@ async def post(req, idx: str):
         )
 
 def create_question_labels(questions_df):
-    list_to_exclude=['lastmod', 'name', 'id', 'favourite']
-    included_questions_df = questions_df.query('named not in @list_to_exclude')
-    print(included_questions_df)
-    return [
-        Div(Label(
-            row.iloc[1],
-            Input(id=idx, type=row.iloc[3],placeholder=row.iloc[2])
-        )) if 'email' not in idx else
-        Div(
+    def create_select(idx, row):
+        options = row['options'].split('|') if pd.notna(row['options']) else []
+        return Div(
+            Label(row['full_question']),
+            Select(
+                *[Option(opt.strip(), value=opt.strip()) for opt in options],
+                id=idx, name=idx
+            )
+        )
+
+    def create_radio(idx, row):
+        options = row['options'].split('|') if pd.notna(row['options']) else []
+        return Div(
+            Label(row['full_question']),
+            *[Label(
+                Input(type="radio", name=idx, value=opt.strip()),
+                opt.strip()
+            ) for opt in options],
+            cls="radio-group"
+        )
+
+    def create_email(idx, row):
+        return Div(
             Label('Email Address'),
-            Input(id=idx, type=row.iloc[3], placeholder=row.iloc[2], 
-                 name=idx,  # For database storage
-                 hx_post=f'/contact/email/{idx}',  # Pass field name in URL
+            Input(id=idx, type='email', placeholder=row.get('placeholder_text', ''), 
+                 name=idx,
+                 hx_post=f'/contact/email/{idx}',
                  hx_indicator='#ind'),
             hx_target='this',
             hx_swap='outerHTML'
         )
-        for idx, row in included_questions_df.iterrows()
-    ]
+
+    def create_date(idx, row):
+        return Div(Label(
+            row['full_question'],
+            Input(id=idx, type='date', placeholder=row.get('placeholder_text', ''))
+        ))
+
+    def create_text(idx, row):
+        return Div(Label(
+            row['full_question'],
+            Input(id=idx, type='text', placeholder=row.get('placeholder_text', ''))
+        ))
+
+    type_handlers = {
+        'select': create_select,
+        'radio': create_radio,
+        'email': create_email,
+        'date': create_date,
+        'text': create_text
+    }
+    
+    def get_handler_for_field(idx, row):
+        htmltype = row['htmltype']
+        if htmltype not in type_handlers:
+            raise ValueError(f"Unknown input type '{htmltype}' for field: {idx}")
+        return type_handlers[htmltype]
+
+    list_to_exclude=['lastmod', 'name', 'id', 'favourite']
+    included_questions_df = questions_df.query('named not in @list_to_exclude')
+    
+    result = []
+    for idx, row in included_questions_df.iterrows():
+        handler = get_handler_for_field(idx, row)
+        result.append(handler(idx, row))
+    
+    return result
 
 #[x if condition else y for x in items]
 
@@ -217,9 +265,9 @@ def create_question_labels(questions_df):
 def get(id:int, auth):
     questions = create_question_labels(questions_df)
 
-    res = Form(Group(Input(id="dataset_name")),
+    res = Form(Group(Input(id="dataset_name_text")),
         Hidden(id="id"), CheckboxX(id="favourite", label='Favourite'),
-        Textarea(id="details", placeholder=f"Hi {auth}, in future changes to the catalog will include you username as metadata for any changes.", rows=10),
+        Textarea(id="details_text", placeholder=f"Hi {auth}, in future changes to the catalog will include you username as metadata for any changes.", rows=10),
         *questions,
         Button("Save Dataset"),
         hx_put="/", target_id=f'dataset-{id}', id="edit", hx_swap='outerHTML')
@@ -233,18 +281,18 @@ def put(dataset: Dataset, auth):
 @rt("/")
 def post(dataset:Dataset):
     # Doesn't use auth as it is entered as a hidde value in the form that creates this dataset in get /
-    new_inp =  Input(id="dataset_name", placeholder="New Dataset", hx_swap_oob='true')
+    new_inp =  Input(id="dataset_name_text", placeholder="New Dataset", hx_swap_oob='true')
     return datasets.insert(dataset), new_inp
 
-@app.get
-def models(make: str, sleep: int = 0):
-    time.sleep(sleep)
-    cars = {
-        "audi": ["A1", "A4", "A6"],
-        "toyota": ["Landcruiser", "Tacoma", "Yaris"],
-        "bmw": ["325i", "325ix", "X5"],
-    }
-    return tuple(Option(v, value=v) for v in cars[make])
+# @app.get
+# def models(make: str, sleep: int = 0):
+#     time.sleep(sleep)
+#     cars = {
+#         "audi": ["A1", "A4", "A6"],
+#         "toyota": ["Landcruiser", "Tacoma", "Yaris"],
+#         "bmw": ["325i", "325ix", "X5"],
+#     }
+#     return tuple(Option(v, value=v) for v in cars[make])
 
 def create_answer_paragraphs(dataset, questions_df):
     paragraphs = []
@@ -272,9 +320,9 @@ def get(id:int):
                  target_id=f'dataset-{dataset.id}', hx_swap="outerHTML")
     answer_paragraphs = create_answer_paragraphs(dataset, questions_df)
 
-    return Div(H2(dataset.dataset_name), 
+    return Div(H2(dataset.dataset_name_text), 
                *answer_paragraphs,
-               Div(dataset.details, cls="markdown"), btn, Hr())
+               btn, Hr())
 
 # leave this here
 # P(questions_df.loc['answer_with_url'].iloc[1]+": ", A("Link",href=dataset.answer_with_url))
