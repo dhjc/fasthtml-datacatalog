@@ -2,7 +2,6 @@ named,type,full_question,placeholder_text,htmltype,options
 id,int,Unique ID,eg 0...,text,
 dataset_name_text,str,Dataset Name,What is your dataset called?,text,
 favourite,bool,Favourite,NA,text,
-name,str,Not Actually Sure,Do you know why I coded this?,text,
 details_text,str,Notes,Stuff,text,
 lastmod,str,Last Modified,Who last modified this,text,
 answer_with_url_text,str,What is your favourite website?,https://grugbrain.dev,text,
